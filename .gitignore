@@ -3,6 +3,12 @@ venv/
 __pycache__/
 *.pyc
 
+.vscode/
+
+# Local data & logs
+data/
+logs/
+
 # Environment variables / secrets
 .env
 airflow/.env
