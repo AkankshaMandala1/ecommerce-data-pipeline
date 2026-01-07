@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: ecommerce
+    schema: stage
+    tables:
+      - name: orders
+      - name: order_items
+      - name: payments
+      - name: customers
+      - name: products
+
