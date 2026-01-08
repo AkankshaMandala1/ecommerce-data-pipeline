@@ -3,7 +3,7 @@ select
   payment_sequential,
   payment_type,
   payment_installments,
-  payment_value,
+  cast(nullif(payment_value, '') as numeric) as payment_value,
   ingested_at
 from {{ source('ecommerce', 'payments') }}
 
