@@ -37,6 +37,15 @@ with DAG(
         ),
     )
 
+    load_stage = BashOperator(
+    task_id="load_stage_postgres",
+    bash_command=(
+        f"cd {REPO} && "
+        f"python transform/load_stage_postgres.py "
+"\"{{ ti.xcom_pull(task_ids='generate_run_ts') }}\""
+    ),
+)
+
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
@@ -53,4 +62,4 @@ with DAG(
         ),
     )
 
-    run_ts >> ingest_raw >> clean_s3 >> dbt_run >> dbt_test
+    run_ts >> ingest_raw >> clean_s3 >> load_stage >> dbt_run >> dbt_test
