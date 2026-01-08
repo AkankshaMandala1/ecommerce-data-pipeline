@@ -2,29 +2,40 @@
 
 This project demonstrates a production-style data engineering pipeline that ingests raw e-commerce data, processes it through a modern ELT workflow, and makes it analytics-ready using industry-standard tools.
 
-The goal of the project is to showcase:
-Data Ingestion
-Orchestration with Airflow
-Cloud Storage (AWS S3)
-Transformation with dbt
-Testing and data quality checks
-Analytics-ready data modelling
+The goal of this project is to showcase:
+   - Data ingestion & versioning
+   - Orchestration with Airflow
+   - Cloud storage using AWS S3
+   - Data cleaning & standardization
+   - Loading data into a warehouse staging layer
+   - Analytics engineering with dbt
+   - Data quality testing
 
 ---
 
 ## 🚀 Architecture Overview:
-CSV Files → Ingestion Scripts → AWS S3 (Raw)
-        → Airflow Orchestration
-        → Data Cleaning Layer
-        → dbt Transformations
-        → Analytics Tables
+Local CSV Files
+   ↓
+Ingestion Scripts (Python)
+   ↓
+AWS S3 (Raw Layer)
+   ↓
+Cleaning & Standardization
+   ↓
+AWS S3 (Clean Layer)
+   ↓
+Load into Postgres (Stage Schema)
+   ↓
+dbt Transformations
+   ↓
+Postgres (Analytics Schema)
 
 **Tech Stack**
-- **Python** – ingestion & transformations
+- **Python** – ingestion, cleaning, loading
 - **AWS S3** – raw + cleaned data storage
 - **Apache Airflow** – orchestration
 - **dbt** – transformations & tests
-- **Postgres** – analytics warehouse
+- **Postgres** – staging & analytics warehouse
 - **Docker** – reproducible environment
 
 ---
@@ -32,32 +43,66 @@ CSV Files → Ingestion Scripts → AWS S3 (Raw)
 ## 🧩 Pipeline Flow
 
 1. Generate run timestamp
+   - Each pipeline run generates a single UTC timestamp used across all stages for traceability.
 
 2. Ingestion
-   - Reads raw CSV files (orders, customers, products, payments, order_items)
-   - Adds ingestion metadata
+   - Reads local CSV files (orders, customers, products, payments, order_items)
+   - Adds ingested_at metadata
    - Uploads versioned data to S3
 
-2. Transformation
-   - Cleans and standardizes raw data
-   - Moves curated data to clean S3 layer
+3. Cleaning (Clean Layer)
+   - Standardizes column names & data types
+   - Handles nulls and duplicates
+   - Writes curated data back to S3
 
-3. Analytics Modeling (dbt)
-   - Staging models for source normalization
-   - Fact & dimension tables:
-     - `fact_orders`
-     - `fact_order_items`
-     - `dim_customers`
-     - `dim_products`
+4. Load to Warehouse (Stage Layer)
+   - Clean data is loaded from S3 into Postgres stage schema
+   - Tables are:
+      -  Created once
+      - Truncated & reloaded every run
+   - This avoids breaking downstream dbt models while ensuring fresh data
 
-4. Orchestration
-   - End-to-end pipeline automated with Airflow DAG
-   - Tasks:
-     - `generate_run_ts`
-     - `ingest_raw_data`
-     - `clean_raw_to_clean_s3`
-     - `dbt_run`
-     - `dbt_test`
+   Schema:
+      `stage.orders`
+      `stage.order_items`
+      `stage.payments`
+      `stage.customers`
+      `stage.products`
+
+5. Analytics Modeling (dbt)
+   dbt builds analytics views on top of the stage schema.
+   Staging models:
+      `stg_orders`
+      `stg_order_items`
+      `stg_payments`
+      `stg_customers`
+      `stg_products`
+
+   Fact & Dimension models
+      `fact_orders`
+      `fact_order_items`
+      `dim_customers`
+      `dim_products`
+   All models are created in the analytics schema.
+
+6. Data Quality (dbt tests)
+   Implemented tests:
+      - not_null
+      - unique
+   Ensures:
+      - Primary keys are valid
+      - No missing critical fields
+
+Orchestration with Airflow
+  The full pipeline is automated using a single DAG:
+   ecommerce_end_to_end
+   DAG Tasks
+      - generate_run_ts
+      - ingest_raw_data
+      - clean_raw_to_clean_s3
+      - load_stage_postgres
+      - dbt_run
+      - dbt_test
 
 ---
 
@@ -66,15 +111,15 @@ CSV Files → Ingestion Scripts → AWS S3 (Raw)
 ecommerce-data-pipeline/
 │
 ├── airflow/
-│   ├── dags/                # Airflow DAGs
-│   ├── plugins/
-│   ├── logs/
+│   └── dags/
+│       └── ecommerce_end_to_end.py
 │
 ├── ingestion/
-│   └── ingest_orders.py     # Raw data ingestion to S3
+│   └── ingest_orders.py
 │
 ├── transform/
-│   └── clean_tables.py      # Cleaning layer
+│   ├── clean_tables.py
+│   └── load_stage_postgres.py
 │
 ├── ecommerce_dbt/
 │   ├── models/
@@ -83,5 +128,4 @@ ecommerce-data-pipeline/
 │   └── tests/
 │
 └── data/
-    └── raw/                 # Source CSV files (local)
-
+    └── raw/
