@@ -129,3 +129,15 @@ ecommerce-data-pipeline/
 │
 └── data/
     └── raw/
+
+## 📸 Pipeline Results
+
+### Airflow – Successful DAG Run
+![Airflow DAG](docs/images/airflow_success.png)
+
+### dbt – Transformations
+![dbt run](docs/images/dbt_run_success.png)
+![dbt test](docs/images/dbt_test_success.png)
+
+### Analytics Layer
+![Analytics views](docs/images/analytics_views.png)
